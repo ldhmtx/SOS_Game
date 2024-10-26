@@ -1,6 +1,11 @@
 package game_function;
 
-import javafx.animation.PauseTransition;
+import java.util.ArrayList;
+import java.util.List;
+import game_logic.GeneralGame;
+import game_logic.InfiniteGame;
+import game_logic.SOSLogic;
+import game_logic.SimpleGame;
 import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
@@ -8,11 +13,14 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
-import javafx.util.Duration;
+import javafx.scene.shape.Line;
+import javafx.scene.shape.StrokeLineCap;
 
 public class Board {
     private static String titleStyle = "-fx-font-size: 22px; -fx-text-fill: #333; -fx-font-family: 'Times New Roman';";
@@ -24,142 +32,197 @@ public class Board {
     private Player player1;
     private Player player2;
 
-    private boolean isPlayer1Turn = true;
-
     private GridPane boardGrid;
     private Label turnLabel;
 
-    public Board(String gameMode, int boardSize) {
+    private SOSLogic logic;
+    private double squareSize;
+
+    private Pane drawingPane;
+    private List<Line> drawnLines;
+
+    public Board(String gameMode, int boardSize, Player player1, Player player2) {
         this.gameMode = gameMode;
         this.boardSize = boardSize;
+        this.player1 = player1;
+        this.player2 = player2;
+        this.drawnLines = new ArrayList<>();
+        this.turnLabel = new Label("It's Player 1's turn!");
     }
-
+    
     // constructor creating window the game resides on
-    public void startBoard(Stage boardStage) {
+    protected void startBoard(Stage boardStage) {
         BorderPane gameWindow = new BorderPane();
-
-        setPlayer1(new Player("Player 1", Color.BLUE));
-        setPlayer2(new Player("Player 2", Color.RED));
-
-        VBox gameInfoBox = createGameInfoBox(); // text at top of window
+        
+        // use correct constructor according to game mode
+        if (gameMode.equals("Simple Game")) {
+            logic = new SimpleGame(this, boardSize);
+        } else if (gameMode.equals("General Game")) {
+            logic = new GeneralGame(this, boardSize);
+        } else if (gameMode.equals("Infinite Game")) {
+        	logic = new InfiniteGame(this, boardSize);
+        }
+        
+        // display game mode/board size
+        VBox gameInfoBox = new VBox();
+        gameInfoBox.setAlignment(Pos.CENTER);
+        gameInfoBox.setSpacing(5);
+        
+        Label titleLabel = new Label(gameMode + "\nBoard Size: " + boardSize);
+        titleLabel.setStyle(titleStyle);
+        
+        Button muteButton = new Button("Mute");
+        muteButton.setStyle(textStyle);
+        muteButton.setOnAction(event -> {
+        	// later
+        });
+        muteButton.setVisible(false);
+        
+        gameInfoBox.getChildren().addAll(titleLabel);
         gameWindow.setTop(gameInfoBox);
 
-        boardGrid = createBoardGrid(); // grid
-        gameWindow.setCenter(boardGrid);
-
-        VBox leftPlayerBox = getPlayer1().getPlayerBox(); // player controls
-        leftPlayerBox.setStyle(textStyle); 
+        // while creating the board's grid, create drawingPane on top for drawing lines later
+        StackPane stackPane = new StackPane();
+        boardGrid = createBoardGrid();
+        drawingPane = new Pane();
+        stackPane.getChildren().addAll(boardGrid, drawingPane);
+        drawingPane.setMouseTransparent(true); // so that player can click squares
+        gameWindow.setCenter(stackPane);
+        
+        // player 1's box
+        VBox leftPlayerBox = getPlayer1().getPlayerBox();
+        leftPlayerBox.setStyle(textStyle);
         leftPlayerBox.setSpacing(20);
-        VBox rightPlayerBox = getPlayer2().getPlayerBox();        
+        player1.getScoreLabel().setText("Score: " + logic.getScorePlayer1());
+        
+        // player 2's box
+        VBox rightPlayerBox = getPlayer2().getPlayerBox();
         rightPlayerBox.setStyle(textStyle);
         rightPlayerBox.setSpacing(20);
+        player2.getScoreLabel().setText("Score: " + logic.getScorePlayer2());
+        
+        //rightPlayerBox.getChildren().add(muteButton);
         
         gameWindow.setLeft(leftPlayerBox);
         gameWindow.setRight(rightPlayerBox);
-
-        getPlayer1().enable(); // player 1's turn first
-        getPlayer2().disable();
-
-        setTurnLabel(new Label("It's Player 1's turn!")); // current player
-        getTurnLabel().setStyle(textStyle); 
+        
+        // bottom box for turn label and reset button
+        setTurnLabel(new Label("It's Player 1's turn!"));
+        getTurnLabel().setStyle(textStyle);
         VBox bottomBox = new VBox(getTurnLabel());
         bottomBox.setAlignment(Pos.CENTER);
         gameWindow.setBottom(bottomBox);
 
-        Button resetButton = new Button("Reset Game"); // re-setup game with new settings
-        resetButton.setStyle(textStyle); 
-        resetButton.setOnAction(event -> resetGame(boardStage));
-
+        // reset button to return to game setup window
+        Button resetButton = new Button("Reset Game");
+        resetButton.setStyle(textStyle);
+        resetButton.setOnAction(event -> {
+        		boardStage.close();
+                GameSetup.getInstance().start(new Stage());
+        });
+        
+        Button replayButton = new Button("Replay Game");
+        replayButton.setOnAction(event -> {
+    		if(logic.isGameOver()) {
+    			System.out.print("dog");
+    			
+    		}
+        });
         bottomBox.getChildren().add(resetButton);
-
-        Scene scene = new Scene(gameWindow, 600, 600);
+        
+        //replayButton.setVisible(false);
+        // game window
+        Scene scene = new Scene(gameWindow, 650, 600);
         boardStage.setTitle("SOS");
         boardStage.setScene(scene);
         boardStage.show();
     }
-
-    // if player wants to reset, close current game and redirect to GameSetup
-    private void resetGame(Stage boardStage) {
-        boardStage.close();
-        GameSetup.getInstance().start(new Stage());
-    }
-
-    // box at top of window with gamemode/board size displayed
-    private VBox createGameInfoBox() {
-        VBox gameInfoBox = new VBox();
-        gameInfoBox.setAlignment(Pos.CENTER);
-        gameInfoBox.setSpacing(10);
-
-        Label titleLabel = new Label(gameMode + "\nBoard Size: " + boardSize);
-        titleLabel.setStyle(titleStyle);
-        gameInfoBox.getChildren().add(titleLabel);
-        
-        return gameInfoBox;
-    }
-
-    // creating the grid for the gameboard
-    protected GridPane createBoardGrid() {
+    
+    // creating grid of squares in which player can click
+    public GridPane createBoardGrid() {
         GridPane grid = new GridPane();
         
-        // set window based on screen size
-        Rectangle2D screenBounds = Screen.getPrimary().getVisualBounds(); 
+        // determining size by which to size everything else (the sizes are supposed to be proportional to the boardsize no matter what is selected)
+        Rectangle2D screenBounds = Screen.getPrimary().getVisualBounds();
         double maxWidth = screenBounds.getWidth() * 0.8;
         double maxHeight = screenBounds.getHeight() * 0.8;
-
-        double squareSize = Math.min(maxWidth / boardSize, maxHeight / boardSize) * 0.8;
+        
+        squareSize = Math.min(maxWidth / boardSize, maxHeight / boardSize) * 0.8;
         grid.setPadding(new javafx.geometry.Insets(20));
-
-        // create/add each square in the grid
+        
+        // create each square in the grid
         for (int row = 0; row < boardSize; row++) {
             for (int col = 0; col < boardSize; col++) {
-                Label square = createSquare(squareSize);
+                Label square = createSquare(squareSize, row, col);
                 grid.add(square, col, row);
             }
         }
-
         return grid;
     }
-
-    // creating each individual square in the grid, sizes based on window size
-    protected Label createSquare(double size) {
+    
+    // individual square creation
+    protected Label createSquare(double size, int row, int col) {
         Label square = new Label();
         square.setMinSize(size, size);
-        square.setStyle("-fx-border-color: black; -fx-background-color: lightgray; -fx-alignment: center; -fx-font-size: " + (size - 35) + "px;");
-
-        square.setOnMouseClicked(event -> { // when square is clicked
-            if (!square.getText().isEmpty()) {
-                warnOccupiedSquare();
-                return;
-            }
-
-            // adding the color and letter for the square
-            square.setText(isPlayer1Turn() ? getPlayer1().getChoice() : getPlayer2().getChoice());
-            square.setTextFill(isPlayer1Turn() ? getPlayer1().getColor() : getPlayer2().getColor());
-
-            switchPlayerTurn();
+        double fontSize = size * 0.6;  // size of letters within square
+        square.setStyle("-fx-border-color: black; -fx-background-color: lightgray; -fx-alignment: center; -fx-font-size: " + fontSize + "px;");
+        square.setOnMouseClicked(event -> {
+            logic.onSquareClicked(row, col);
         });
 
         return square;
     }
 
-    // pass control over to next player and update label
-    protected void switchPlayerTurn() {
-        Player currentPlayer = isPlayer1Turn() ? getPlayer1() : getPlayer2();
-        Player nextPlayer = isPlayer1Turn ? getPlayer2() : getPlayer1();
-
-        currentPlayer.disable();
-        nextPlayer.enable();
-
-        getTurnLabel().setText("It's " + nextPlayer.getName() + "'s turn!");
-        setPlayer1Turn(!isPlayer1Turn());
+    // add the appropriate letter and color to clicked square
+    public void updateSquare(int row, int col, String letter, Color color) {
+        Label square = (Label) boardGrid.getChildren().get(row * boardSize + col);
+        square.setText(letter);
+        square.setTextFill(color);
     }
 
-    // if a player tries to place a letter on an occupied space
-    private void warnOccupiedSquare() {
-        getTurnLabel().setText("You cannot place a letter there!");
-        PauseTransition pause = new PauseTransition(Duration.seconds(2.5));
-        pause.setOnFinished(event -> getTurnLabel().setText("It's " + (isPlayer1Turn ? "Player 1" : "Player 2")+ "'s turn!"));
-        pause.play();
+    // mainly used for indicating which player's turn it is, also used for giving game win state and warning invalid moves
+    public void updateTurnLabel(String text) {
+        getTurnLabel().setText(text);
+    }
+
+    // a player has scored now update the label
+    public void updateScoreLabel(int score) {
+    	if (logic.isPlayer1Turn()) {
+    		player1.getScoreLabel().setText("Score: " + logic.getScorePlayer1());
+    	}
+    	else {
+    		player2.getScoreLabel().setText("Score: " + logic.getScorePlayer2());
+    	}
+    }
+
+    // use drawingpane to draw a line starting at x1 and y1 and end at corresponding square
+    public void clearSquare(int row, int col) {
+        Label square = (Label) boardGrid.getChildren().get(row * boardSize + col);
+        square.setText("");
+        square.setStyle("-fx-border-color: black; -fx-background-color: lightgray; -fx-alignment: center; -fx-font-size: " + (squareSize * 0.6) + "px;"); // Reset style
+    }
+
+    // method to draw a line starting at x1 and y1 to x2 y2
+    public void drawLine(double x1, double y1, double x2, double y2) {
+        Line line = new Line(x1, y1, x2, y2);
+        line.setStroke(logic.isPlayer1Turn() ? player1.getColor() : player2.getColor());
+        line.setStrokeWidth(getSquareSize() * 0.1);
+        line.setStrokeLineCap(StrokeLineCap.ROUND);
+        drawingPane.getChildren().add(line);
+        drawnLines.add(line); // added for the infinite gamemode, to remove any made sos lines in removed rows
+    }
+
+    // remove lines in a cleared row
+    public void removeLinesForRow(int row) {
+        double y = row * squareSize;
+        drawnLines.removeIf(line -> {
+            
+            boolean intersects = (line.getStartY() <= y + squareSize && line.getEndY() >= y);
+            if (intersects) {
+                drawingPane.getChildren().remove(line);
+            }
+            return intersects;
+        });
     }
 
     public Player getPlayer1() {
@@ -178,14 +241,6 @@ public class Board {
         this.player2 = player2;
     }
 
-    public boolean isPlayer1Turn() {
-        return isPlayer1Turn;
-    }
-
-    public void setPlayer1Turn(boolean isPlayer1Turn) {
-        this.isPlayer1Turn = isPlayer1Turn;
-    }
-
     public Label getTurnLabel() {
         return turnLabel;
     }
@@ -194,13 +249,7 @@ public class Board {
         this.turnLabel = turnLabel;
     }
 
-    // Method to get the game mode
-    public String getGameMode() {
-        return gameMode; // Return the game mode
-    }
-
-    // Method to get the board size
-    public int getBoardSize() {
-        return boardSize; // Return the board size
+    public double getSquareSize() {
+        return squareSize;
     }
 }

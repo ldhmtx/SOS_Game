@@ -1,4 +1,4 @@
-package game_function;
+package game_logic;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -16,13 +16,15 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import game_function.Board;
+
 import java.util.concurrent.CountDownLatch;
 
-public class BoardTest extends Application {
-    private Board board;
+public class BoardTest{
+
+	private Board board;
     private static CountDownLatch latch;
 
-    @Override
     public void start(Stage primaryStage) {
         primaryStage.setScene(new Scene(new Label("JavaFX Test App"))); // Start JavaFX
         primaryStage.show();
@@ -49,16 +51,6 @@ public class BoardTest extends Application {
     @AfterAll
     public static void tearDown() {
         Platform.exit(); // Clean up JavaFX
-    }
-
-    @Test
-    public void testSwitchPlayerTurn() {
-        Platform.runLater(() -> {
-            board.switchPlayerTurn();
-            assertEquals("It's Player 2's turn!", board.getTurnLabel().getText());
-            board.switchPlayerTurn();
-            assertEquals("It's Player 1's turn!", board.getTurnLabel().getText());
-        });
     }
 
     @Test

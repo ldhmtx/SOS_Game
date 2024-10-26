@@ -1,4 +1,4 @@
-package game_function;
+package game_logic;
 
 import static org.junit.jupiter.api.Assertions.*;
 import javafx.application.Application;
@@ -9,6 +9,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import game_function.GameSetup;
 
 import java.util.concurrent.CountDownLatch;
 
