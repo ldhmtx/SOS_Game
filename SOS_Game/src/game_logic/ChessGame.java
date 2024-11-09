@@ -2,14 +2,13 @@ package game_logic;
 
 import game_function.Board;
 
-public class SimpleGame extends SOSLogic {
-
-    // Constructor
-    public SimpleGame(Board board, int boardSize) {
+public class ChessGame extends SOSLogic {
+	
+	public ChessGame(Board board, int boardSize) {
         super(board, boardSize);
     }
-
-    @Override
+	
+	@Override
     public boolean isGameOver() {
         if(board.getPlayer1().getPlayerScore() > 0 || board.getPlayer2().getPlayerScore() > 0 ||isBoardFull()) {
         	gameOver();
@@ -31,5 +30,5 @@ public class SimpleGame extends SOSLogic {
     		board.updateTurnLabel("Game Over! " + (score1 > score2 ? board.getPlayer1().getName()+" Won!" : board.getPlayer2().getName()+" Won!"));
     	}
     } 
-    
+	
 }

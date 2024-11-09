@@ -1,4 +1,4 @@
-package game_logic;
+/*package game_logic;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -8,17 +8,21 @@ import game_function.Player;
 
 public class SOSLogic {
 	
+    protected Board board;
     private char[][] gameGrid;
     private int boardSize;
-    protected Board board;
-    private boolean isPlayer1Turn;
+    private boolean isPlayer1Turn = true;
+
+    private int scorePlayer1;
+    private int scorePlayer2;
 
     // inherited constructor
     public SOSLogic(Board board, int boardSize) {
-    	this.board = board;
-        this.boardSize = boardSize;
+        this.board = board;
+        this.setBoardSize(boardSize);
         this.setGameGrid(new char[boardSize][boardSize]);
-        this.setPlayer1Turn(true);
+        this.scorePlayer1 = 0;
+        this.scorePlayer2 = 0;
     }
     
     // overriden by child classes
@@ -26,20 +30,20 @@ public class SOSLogic {
     }
     
     // when player clicks a square, if it is empty and the game is not over, add to board and determine if sos
-    public void onSquareClicked(int row, int col, String letter) {
+    public void onSquareClicked(int row, int col) {
         if (getGameGrid()[row][col] == '\0' && !isGameOver()) {
+        	
+            Player currentPlayer = isPlayer1Turn ? board.getPlayer1() : board.getPlayer2();
+            String letter = currentPlayer.getChoice();
             getGameGrid()[row][col] = letter.charAt(0); 
-            
-            if (board.getGameMode() != "Chess Game") {
-            	board.updateSquare(row, col, letter, board.getCurrentPlayer().getColor());
-            }
-            
+            board.updateSquare(row, col, letter, currentPlayer.getColor());
             List<int[]> allFoundSOSsList = findSOSs(row, col);
+            
             // for all found soss
             if (allFoundSOSsList != null && !allFoundSOSsList.isEmpty()) {
                 for (int[] coords : allFoundSOSsList) { // for any number SOSs
-                	board.findLineCoords(coords[0], coords[1], coords[2], coords[3]); 
-                    board.getCurrentPlayer().incrementScore(); 
+                	drawSOSLine(coords[0], coords[1], coords[2], coords[3]); 
+                    incrementScore(); 
                 }
             }
             //check if game is over, otherwise hand over control to next player
@@ -52,29 +56,66 @@ public class SOSLogic {
         else { // player tried to place when/where they couldn't, game is either over or space is occupied
         	board.updateTurnLabel(isGameOver() ? "The game is over!" : "You cannot place a letter there!");
         }
+        
     }
     
-    private void switchPlayer() {
-        setPlayer1Turn(!isPlayer1Turn());
-        board.updateCurrentPlayer();
-        board.updateTurnLabel("It's " + board.getCurrentPlayer().getName() + "'s turn!");
-    }
     // if all spaces are filled on board
     protected boolean isBoardFull() {
         for (int row = 0; row < getBoardSize(); row++) {
             for (int col = 0; col < getBoardSize(); col++) {
-                if (getGameGrid()[row][col] == '\0') { // if found empty square, return
-                    return false;
+                if (getGameGrid()[row][col] == '\0') {
+                    return false; // if square empty return false on first one found
                 }
             }
         }
         return true;
     }
     
+    // increments score for current player and update labels
+    public void incrementScore() {
+        if (isPlayer1Turn) {
+            scorePlayer1++;
+            board.updateScoreLabel(scorePlayer1);
+        } else {
+            scorePlayer2++;
+            board.updateScoreLabel(scorePlayer2);
+        }
+    }
+    
+    // disable moves if game is over or if not player's turn
+    private void disableMoves() {
+        if (isGameOver()) {
+            board.getPlayer1().disable();
+            board.getPlayer2().disable();
+        } else {
+            if (isPlayer1Turn()) {           // player 1's turn
+                board.getPlayer1().enable();
+                board.getPlayer2().disable();
+            } else {                         // player 2's turn
+                board.getPlayer1().disable();
+                board.getPlayer2().enable();
+            }
+        }
+    }
+    
     // overriden by child classes (except infinite game, which would return false regardless)
     public boolean isGameOver() {
 		return false;
 	}
+
+    // find start and end points and send to board to draw line
+    private void drawSOSLine(int startRow, int startCol, int endRow, int endCol) {
+        double squareSize = board.getSquareSize();
+        double offset = squareSize * -0.15*(getBoardSize()/3);  // offset because for some reason the line isn't centered without it
+
+        // find where the line needs to start and end
+        double startX = startCol * squareSize + (squareSize / 2) - offset;
+        double startY = startRow * squareSize + (squareSize / 2) - offset;
+        double endX = endCol * squareSize + (squareSize / 2) - offset;
+        double endY = endRow * squareSize + (squareSize / 2) - offset;
+
+        board.drawLine(startX, startY, endX, endY);
+    }
 
     // given a square, find any possible sos around it
     private List<int[]> findSOSs(int row, int col) {
@@ -100,7 +141,7 @@ public class SOSLogic {
     }
     
  // check for SOS horizontally
-    private int[] checkHorizontal(int row, int col) {
+    protected int[] checkHorizontal(int row, int col) {
         if (getGameGrid()[row][col] == 'O'               // if player placed an O
         		&& col >= 1                              // left square exists
                 && col <= getBoardSize() - 2             // right side exists
@@ -124,7 +165,7 @@ public class SOSLogic {
     }
 
     // check for SOS vertically
-    private int[] checkVertical(int row, int col) {
+    protected int[] checkVertical(int row, int col) {
         if (getGameGrid()[row][col] == 'O'               // if player placed an O
                 && row >= 1                              // top square exists
                 && row <= getBoardSize() - 2             // bottom square exists
@@ -148,7 +189,7 @@ public class SOSLogic {
     }
 
     // check for SOS in forward diagonal
-    private int[] checkForwardDiagonal(int row, int col) { 
+    protected int[] checkForwardDiagonal(int row, int col) { 
         if (getGameGrid()[row][col] == 'O'                   // if player placed an O 
                 && row >= 1 && col >= 1                      // top left square exists
                 && row <= getBoardSize() - 2
@@ -174,7 +215,7 @@ public class SOSLogic {
     }
 
     // check for SOS in backward diagonal
-    private int[] checkBackwardDiagonal(int row, int col) {
+    protected int[] checkBackwardDiagonal(int row, int col) {
         if (getGameGrid()[row][col] == 'O'                   // if player placed an O
                 && row >= 1 && col <= getBoardSize() - 2     // top right square exists
                 && row <= getBoardSize() - 2 && col >= 1     // bottom left square exists
@@ -196,31 +237,45 @@ public class SOSLogic {
         }
         return null; // none found
     }
+
+    // switch to next player
+    private void switchPlayer() {
+        isPlayer1Turn = !isPlayer1Turn;
+        String nextPlayerName = isPlayer1Turn ? board.getPlayer1().getName() : board.getPlayer2().getName();
+        board.updateTurnLabel("It's " + nextPlayerName + "'s turn!");
+        disableMoves();
+    }
     
-    public int getBoardSize() {
+    // getter for computer player to use to find SOSs
+    public boolean compSOSFinder(int row, int col, char letter) {
+        gameGrid[row][col] = letter;
+        boolean foundSOS = checkHorizontal(row, col) != null ||      // if exists horizontal
+                           checkVertical(row, col) != null ||        // if exists vertical
+                           checkForwardDiagonal(row, col) != null || // if exists diagonal
+                           checkBackwardDiagonal(row, col) != null;
+        return foundSOS;
+    }
+
+
+    public int getScorePlayer1() {
+        return scorePlayer1;
+    }
+
+    public int getScorePlayer2() {
+        return scorePlayer2;
+    }
+    
+    public boolean isPlayer1Turn() {
+    	return isPlayer1Turn;
+    }
+
+	public int getBoardSize() {
 		return boardSize;
 	}
 
-	// getter for computer player to use to find SOSs
-    public int compSOSFinder(int row, int col, char letter) {
-        gameGrid[row][col] = letter; // hypothetical placement
-        int numberOfFoundSOS = 0;
-        
-        if (checkHorizontal(row,col) != null) { //increment sos for maximum number of sos's
-        	numberOfFoundSOS++;
-   		}
-        if (checkVertical(row,col) != null) {
-        	numberOfFoundSOS++;
-        }
-        if (checkForwardDiagonal(row, col) != null) {
-        	numberOfFoundSOS++;
-   		}
-        if (checkBackwardDiagonal(row, col) != null) {
-        	numberOfFoundSOS++;
-        }
-        gameGrid[row][col] = '\0'; // remove hypothetical placement
-        return numberOfFoundSOS;
-    }
+	public void setBoardSize(int boardSize) {
+		this.boardSize = boardSize;
+	}
 
 	public char[][] getGameGrid() {
 		return gameGrid;
@@ -229,12 +284,4 @@ public class SOSLogic {
 	public void setGameGrid(char[][] gameGrid) {
 		this.gameGrid = gameGrid;
 	}
-
-	public boolean isPlayer1Turn() {
-		return isPlayer1Turn;
-	}
-
-	public void setPlayer1Turn(boolean isPlayer1Turn) {
-		this.isPlayer1Turn = isPlayer1Turn;
-	}
-}
+}*/

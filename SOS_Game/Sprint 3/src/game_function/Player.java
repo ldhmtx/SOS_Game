@@ -1,6 +1,5 @@
-package game_function;
+/**package game_function;
 
-import game_logic.SOSLogic;
 import javafx.scene.control.Label;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.ToggleGroup;
@@ -11,11 +10,10 @@ public class Player {
     private String name;
     private Color color;
     private VBox playerBox;
-    protected RadioButton s;
-    protected RadioButton o;
-    private int playerScore;
-    
-    protected SOSLogic logic;
+    private RadioButton s;
+    private RadioButton o;
+    //private RadioButton humanPlayer;
+    //private RadioButton computerPlayer;
     
     private Label scoreLabel;
     
@@ -26,25 +24,13 @@ public class Player {
         this.setName(name);
         this.color = color;
         this.playerBox = createRadioButtons(name);
-        this.playerScore = 0;
-    }
-    
-    public void makeMove() {
-    	
-    }
-    
-    public boolean isComputer() {
-    	return false;
-    }
-    
-    public void setSOSLogic(SOSLogic logic) {
-        this.logic = logic;
     }
 
     // player buttons for individual's controls (S/O)
     private VBox createRadioButtons(String playerName) {
         VBox vbox = new VBox(10);
         ToggleGroup toggleGroup = new ToggleGroup();
+        //ToggleGroup toggleGroupComp = new ToggleGroup();
         vbox.setSpacing(20);
 
         Label playerLabel = new Label(playerName);
@@ -58,11 +44,19 @@ public class Player {
         s.setToggleGroup(toggleGroup);
         o.setToggleGroup(toggleGroup);
 
-        s.setSelected(true); // s selected by default
+        s.setSelected(true); // s is selected by default
         
         scoreLabel = new Label();
+        
+        //computerPlayer = new RadioButton("Computer");
+        //humanPlayer = new RadioButton("Human");
+        
+        //computerPlayer.setToggleGroup(toggleGroupComp);
+        //humanPlayer.setToggleGroup(toggleGroupComp);
+        
+        //humanPlayer.setSelected(true);
 
-        vbox.getChildren().addAll(playerLabel, s, o,scoreLabel);
+        vbox.getChildren().addAll(playerLabel, s, o,scoreLabel); //, computerPlayer, humanPlayer
 
         return vbox;
     }
@@ -79,14 +73,18 @@ public class Player {
         return color;
     }
 
-    public void enable() { // enable player's buttons
+    public void enable() {
         s.setDisable(false);
         o.setDisable(false);
     }
 
-    public void disable() { // disable player's buttons
+    public void disable() {
         s.setDisable(true);
         o.setDisable(true);
+    }
+
+    public boolean isDisabled() {
+        return s.isDisabled();
     }
 
     public String getName() {
@@ -100,15 +98,7 @@ public class Player {
     public Label getScoreLabel() {
     	return this.scoreLabel;
     }
-    
-    public void incrementScore() {
-    	this.playerScore ++;
-    	this.getScoreLabel().setText("Score: "+ this.getPlayerScore());;
-    }
-    
-    public int getPlayerScore() {
-    	return this.playerScore;
-    }
+
 
     // return appropriate hex from player's color choice
     private String toHex(Color color) {
@@ -117,5 +107,5 @@ public class Player {
                 (int) (color.getGreen() * 255),
                 (int) (color.getBlue() * 255));
     }
-
 }
+**/

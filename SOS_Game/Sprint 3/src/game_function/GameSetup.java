@@ -1,4 +1,4 @@
-package game_function;
+/**package game_function;
 
 import org.junit.platform.commons.util.StringUtils;
 
@@ -11,7 +11,6 @@ import javafx.scene.control.Label;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
-import javafx.scene.control.SpinnerValueFactory.IntegerSpinnerValueFactory;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.BorderPane;
@@ -27,20 +26,16 @@ public class GameSetup extends Application {
     private RadioButton simpleGame; 
     private RadioButton generalGame;
     private RadioButton infiniteGame;
-    private RadioButton chessGame;
     
-    private Label warnPlayersLabel;
+    private Label warnOccupiedColorLabel;
     
     private TextField player1Name;
     private TextField player2Name;
     
-    private CheckBox player1CompCheckBox;
-    private CheckBox player2CompCheckBox;
-    
     private Spinner<String> player1ColorSpinner;
     private Spinner<String> player2ColorSpinner;
-    private Spinner<String> player1SpeedSpinner;
-    private Spinner<String> player2SpeedSpinner;
+    private boolean player1Computer;
+    private boolean player2Computer;
     
     private Spinner<Integer> boardSizeSpinner;
     private Scene scene;
@@ -68,58 +63,66 @@ public class GameSetup extends Application {
         simpleGame = new RadioButton("Simple Game"); 
         generalGame = new RadioButton("General Game"); 
         infiniteGame = new RadioButton("Infinite Game");
-        chessGame = new RadioButton("Chess Game");
 
         simpleGame.setToggleGroup(toggleGroup);
         generalGame.setToggleGroup(toggleGroup);
         infiniteGame.setToggleGroup(toggleGroup);
-        chessGame.setToggleGroup(toggleGroup);
         
         simpleGame.setSelected(true);
 
         simpleGame.setStyle(textStyle);
         generalGame.setStyle(textStyle);
         infiniteGame.setStyle(textStyle);
-        chessGame.setStyle(textStyle);
 
         // board size
         Label boardSizeLabel = new Label("Board size: (3-20):");  
         boardSizeLabel.setStyle(textStyle);
 
         boardSizeSpinner = new Spinner<>(); 
-        SpinnerValueFactory<Integer> boardSizeFactory = new SpinnerValueFactory.IntegerSpinnerValueFactory(3, 20, 3);
-        boardSizeSpinner.setValueFactory(boardSizeFactory);
+        boardSizeSpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(3, 20, 3));
         boardSizeSpinner.setStyle(textStyle);
         
-        toggleGroup.selectedToggleProperty().addListener((observable, originalGameModesSelected, ChessGameModeSelected) -> {
-            if (ChessGameModeSelected == chessGame) {
-                ((IntegerSpinnerValueFactory) boardSizeFactory).setMin(8);
-                if (boardSizeSpinner.getValue() < 8) {
-                    boardSizeSpinner.getValueFactory().setValue(8);
-                    player1CompCheckBox.setDisable(true);
-                    player2CompCheckBox.setDisable(true);
-                }
-                
-                boardSizeLabel.setText("Board size: (8-20):");
-            } else {
-                ((IntegerSpinnerValueFactory) boardSizeFactory).setMin(3);
-                boardSizeLabel.setText("Board size: (3-20):");
-                player1CompCheckBox.setDisable(false);
-                player2CompCheckBox.setDisable(false);
-            }
-        });
-        
         // warning for prevented game start because of two players trying to use the same color
-        warnPlayersLabel = new Label("");
-        warnPlayersLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: red;");
+        warnOccupiedColorLabel = new Label("");
+        warnOccupiedColorLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: red;");
 
         // begin game button
         Button beginGameButton = new Button("Begin Game");
         beginGameButton.setId("beginGameButton");
         beginGameButton.setStyle(textStyle);
         beginGameButton.setOnAction(event -> {
-        	gameBegin();
-        	primaryStage.close();
+        	String player1Color = player1ColorSpinner.getValue();
+            String player2Color = player2ColorSpinner.getValue();
+            
+            // if players are trying to use the same color
+        	if (player1Color.equals(player2Color)){
+        		warnOccupiedColorLabel.setText("Two players cannot share the same color!");
+        	} 
+        	// if players are using a name that is null or only spaces
+        	else if (StringUtils.isBlank(player1Name.getText()) || StringUtils.isBlank(player1Name.getText()))  {
+        		warnOccupiedColorLabel.setText("Player names cannot be empty!");
+        	}
+        	// else all is good in the world
+        	else {
+	            String gameMode = getSelectedGameMode(); 
+	            int boardSize = getBoardSize(); 
+	
+	            Player player1 = player1Computer
+	                    ? new Computer(getPlayer1Name(), getPlayerColor(player1Color))
+	                    : new Player(getPlayer1Name(), getPlayerColor(player1Color));
+
+	                // call appropriate constructor if player is computer
+	                Player player2 = player2Computer
+	                    ? new Computer(getPlayer2Name(), getPlayerColor(player2Color))
+	                    : new Player(getPlayer2Name(), getPlayerColor(player2Color));
+	                
+	            Board board = new Board(gameMode, boardSize, player1, player2);
+	            
+	            Stage boardStage = new Stage();
+	            board.startBoard(boardStage);
+	
+	            primaryStage.close();
+        	}
         });
         
         // player customization windows(optional, hence initially hidden)
@@ -152,7 +155,7 @@ public class GameSetup extends Application {
         });
 
         // add everything that needs to be in the center
-        centerVBox.getChildren().addAll(gameModeLabel, simpleGame, generalGame, infiniteGame, chessGame, boardSizeLabel, boardSizeSpinner,playerCustomizationButton, beginGameButton, warnPlayersLabel);
+        centerVBox.getChildren().addAll(gameModeLabel, simpleGame, generalGame, infiniteGame, boardSizeLabel, boardSizeSpinner,playerCustomizationButton, beginGameButton, warnOccupiedColorLabel);
 
         root.setLeft(leftVBox);
         root.setRight(rightVBox);
@@ -164,41 +167,7 @@ public class GameSetup extends Application {
         primaryStage.show();
     }
     
-    private void gameBegin() {
-    	String player1Color = player1ColorSpinner.getValue();
-        String player2Color = player2ColorSpinner.getValue();
-        
-        String player1SpeedComp = player1SpeedSpinner.getValue();
-        String player2SpeedComp = player2SpeedSpinner.getValue();
-        
-        // if players are trying to use the same color
-    	if (player1Color.equals(player2Color)){
-    		warnPlayersLabel.setText("Two players cannot share the same color!");
-    	} 
-    	// if players are using a name that is null or only spaces
-    	else if (StringUtils.isBlank(player1Name.getText()) || StringUtils.isBlank(player2Name.getText()))  {
-    		warnPlayersLabel.setText("Player names cannot be empty!");
-    	}
-    	// else all is good in the world
-    	else {
-    		String gameMode = getSelectedGameMode(); 
-            int boardSize = getBoardSize();
-
-            Player player1 = (player1CompCheckBox.isSelected())
-                    ? new Computer(getPlayer1Name(), getPlayerColor(player1Color), player1SpeedComp, "S")
-                    : new Player(getPlayer1Name(), getPlayerColor(player1Color));
-
-            Player player2 = (player2CompCheckBox.isSelected())
-                    ? new Computer(getPlayer2Name(), getPlayerColor(player2Color), player2SpeedComp, "O")
-                    : new Player(getPlayer2Name(), getPlayerColor(player2Color));
-                
-            Board board = new Board(gameMode, boardSize, player1, player2);
-            Stage boardStage = new Stage();
-            board.startBoard(boardStage);
-    	}
-	}
-
-	// create each player customization box, boolean is to correctly attribute to appropriate player
+    // create each player customization box, boolean is to correctly attribute to appropriate player
     private VBox playerCustomizationVBox(String defaultName, String defaultColor, boolean isPlayer1) {
         VBox vbox = new VBox(10);
         
@@ -226,37 +195,18 @@ public class GameSetup extends Application {
         // selecting computer players, implement later
         CheckBox computerPlayerOption = new CheckBox("Computer?");
         
-        Spinner<String> ComputerSpeed = new Spinner<>();
-        SpinnerValueFactory<String> speedFactory = new SpinnerValueFactory.ListSpinnerValueFactory<>(
-            FXCollections.observableArrayList("Normal", "Faster", "Lightspeed")
-        );
-        ComputerSpeed.setValueFactory(speedFactory);
-        ComputerSpeed.getValueFactory().setValue("Normal");
-        
-        ComputerSpeed.setVisible(false);
-        
-        computerPlayerOption.selectedProperty().addListener((CompSelectedProperty, ComputerNotSelected, ComputerSelected) -> {
-            if (ComputerSelected) {
-                ComputerSpeed.setVisible(true);
-            } else {
-                ComputerSpeed.setVisible(false);
-            }
-        });
         // attribute attributes to appropriate player
         if (isPlayer1) {
             player1Name = playerChosenName;
             player1ColorSpinner = colorSpinner;
-            player1CompCheckBox = computerPlayerOption;
-            player1SpeedSpinner = ComputerSpeed;
-            
+            player1Computer = computerPlayerOption.isSelected();
         } else {
             player2Name = playerChosenName;
             player2ColorSpinner = colorSpinner;
-            player2CompCheckBox = computerPlayerOption;
-            player2SpeedSpinner = ComputerSpeed;
+            player2Computer = computerPlayerOption.isSelected();
         }
 
-        vbox.getChildren().addAll(playerCustomLabel,colorSpinner, playerChosenName, computerPlayerOption, ComputerSpeed);
+        vbox.getChildren().addAll(playerCustomLabel,colorSpinner, playerChosenName, computerPlayerOption);
         
         return vbox;
     }
@@ -280,7 +230,7 @@ public class GameSetup extends Application {
     }
 
     public String getSelectedGameMode() {
-        return simpleGame.isSelected() ? "Simple Game" : (generalGame.isSelected() ? "General Game" : (infiniteGame.isSelected() ? "Infinite Game" : "Chess Game"));
+        return simpleGame.isSelected() ? "Simple Game" : (generalGame.isSelected() ? "General Game" : "Infinite Game");
     }
     
     public String getPlayer1Name() {
@@ -306,4 +256,4 @@ public class GameSetup extends Application {
     public static void main(String[] args) {
         launch(args);
     }
-}
+}**/

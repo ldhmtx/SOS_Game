@@ -1,4 +1,4 @@
-package game_logic;
+/**package game_logic;
 
 import game_function.Board;
 
@@ -19,16 +19,11 @@ public class GeneralGame extends SOSLogic {
     }
     
     protected void gameOver() {
-    	board.getPlayer1().disable();
-    	board.getPlayer2().disable();
-    	int score1 = board.getPlayer1().getPlayerScore();
-    	int score2 = board.getPlayer2().getPlayerScore();
-    	
-    	if (score1 == score2) {
+    	if (getScorePlayer1() == getScorePlayer2()) {
     		board.updateTurnLabel("Draw Game!");
     	}
     	else {
-    		board.updateTurnLabel("Game Over! " + (score1 > score2 ? board.getPlayer1().getName()+" Won!" : board.getPlayer1().getName()+" Won!"));
+    		board.updateTurnLabel("Game Over! " + (getScorePlayer1() > getScorePlayer2() ? "Player 1 Won!" : "Player 2 Won!"));
     	}
     } 
-}
+}**/

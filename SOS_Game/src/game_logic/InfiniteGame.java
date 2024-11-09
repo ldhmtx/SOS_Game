@@ -9,9 +9,10 @@ public class InfiniteGame extends SOSLogic {
     }
 
     @Override
-    public void onSquareClicked(int row, int col) {
-        super.onSquareClicked(row, col);
+    public void onSquareClicked(int row, int col, String letter) {
+        super.onSquareClicked(row, col, letter);
         checkAndClearFilledRows();
+        checkAndClearFilledColumns();
     }
 
     // check all rows
@@ -19,7 +20,15 @@ public class InfiniteGame extends SOSLogic {
         for (int row = 0; row < getBoardSize(); row++) {
             if (isRowFilled(row)) {
                 clearRow(row);
-                incrementScore();
+            }
+        }
+    }
+
+    // check all columns
+    private void checkAndClearFilledColumns() {
+        for (int col = 0; col < getBoardSize(); col++) {
+            if (isColumnFilled(col)) {
+                clearColumn(col);
             }
         }
     }
@@ -31,15 +40,59 @@ public class InfiniteGame extends SOSLogic {
                 return false;
             }
         }
-        return true; 
+        return true;
+    }
+
+    // check if a column is completely filled
+    private boolean isColumnFilled(int col) {
+        for (int row = 0; row < getBoardSize(); row++) {
+            if (getGameGrid()[row][col] == '\0') {
+                return false;
+            }
+        }
+        return true;
     }
 
     // clear a row
     private void clearRow(int row) {
         for (int col = 0; col < getBoardSize(); col++) {
-            getGameGrid()[row][col] = '\0'; 
-            board.clearSquare(row, col); 
+            getGameGrid()[row][col] = '\0';
+            board.clearSquareRow(row, col);
         }
-        board.removeLinesForRow(row);
+        removeLinesForRow(row);
+        board.getCurrentPlayer().incrementScore(); // if a player clears a row, they get bonus points
+    }
+
+    // clear a column
+    private void clearColumn(int col) {
+        for (int row = 0; row < getBoardSize(); row++) {
+            getGameGrid()[row][col] = '\0';
+            board.clearSquareRow(row, col);
+        }
+        removeLinesForColumn(col);
+        board.getCurrentPlayer().incrementScore(); // if a player clears a row, they get bonus points
+    }
+    
+ // remove lines in a cleared row
+    public void removeLinesForRow(int row) {
+        double y = row * board.getSquareSize();
+        board.getDrawnLines().removeIf(line -> {
+            boolean intersects = (line.getStartY() <= y + board.getSquareSize() && line.getEndY() >= y);
+            if (intersects) {
+                board.getDrawingPane().getChildren().remove(line);
+            }
+            return intersects;
+        });
+    }
+    
+    private void removeLinesForColumn(int col) {
+        double x = col * board.getSquareSize(); // x-coordinate of the column to be cleared
+        board.getDrawnLines().removeIf(line -> {
+            boolean intersects = (line.getStartX() <= x + board.getSquareSize() && line.getEndX() >= x);
+            if (intersects) {
+                board.getDrawingPane().getChildren().remove(line);
+            }
+            return intersects;
+        });
     }
 }
